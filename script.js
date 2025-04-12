@@ -1,0 +1,1 @@
+const data = localStorage.getItem("smart_meter_data");

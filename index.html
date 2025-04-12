@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Meter QR Scanner</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: sans-serif;
+      color: white;
+    }
+
+    #scanner {
+      position: relative;
+      width: 300px;
+      height: 300px; /* 1:1 ratio */
+      overflow: hidden;
+      border: 4px solid white;
+      border-radius: 8px;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: lime;
+      animation: scan 2s infinite linear;
+    }
+
+    @keyframes scan {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+
+    #result {
+      margin-top: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>Smart Meter QR Scanner</h2>
+  <div id="scanner">
+    <video id="video" autoplay></video>
+    <div id="scan-line"></div>
+  </div>
+  <div id="result">Scan a QR code...</div>
+
+  <!-- QR code scanning library -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script>
+    const video = document.getElementById('video');
+    const resultBox = document.getElementById('result');
+
+    // Start QR Scanner
+    async function startScanner() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      setInterval(() => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/png');
+
+        const qr = new Html5QrcodeScanner("scanner", { fps: 10, qrbox: 250 });
+        qr.clear(); // prevent multiple scans
+        Html5Qrcode.getCameras().then(cameras => {
+          if (cameras && cameras.length) {
+            const html5QrCode = new Html5Qrcode("scanner");
+            html5QrCode.start(
+              cameras[0].id,
+              {
+                fps: 10,
+                qrbox: { width: 250, height: 250 }
+              },
+              qrCodeMessage => {
+                resultBox.innerText = "Data: " + qrCodeMessage;
+                localStorage.setItem("smart_meter_data", qrCodeMessage);
+                html5QrCode.stop();
+              },
+              errorMessage => {
+                // console.log("QR Error:", errorMessage);
+              }
+            );
+          }
+        });
+      }, 2000);
+    }
+
+    startScanner();
+  </script>
+</body>
+</html>
